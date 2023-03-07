@@ -23,9 +23,9 @@ class Player:
         if keys[pygame.K_DOWN]:
             self.pos -= (cos(self.ang), sin(self.ang))
         if keys[pygame.K_RIGHT]:
-           self.ang -= 0.01*delta
+           self.ang += 0.05*delta
         if keys[pygame.K_LEFT]:
-            self.ang += 0.01*delta
+            self.ang -= 0.05*delta
         
         if keys[pygame.K_a]:
             self.pos += (cos(self.ang+pi/2), sin(self.ang+pi/2))
@@ -94,8 +94,12 @@ def checkIntersect(origin, ang):
 
 # This stores the information for the "colliders" on the map
 Map = [Poly([(90,120),(90,150),(120,120)]), Poly([(320,320),(370,210),(210,420)]),Poly([(0,0),(winWidth-1,0), (winWidth-1, winHeight-1), (0, winHeight-1)])]
+for x in range(40,200, 10):
+    Map.append(Poly([(x, 20), (x+4, 20), (x+4, 80), (x, 80)]))
 
+quality = 100
 player = Player()
+correct = 0
 while True:
     clock.tick(60)
     win.fill((0,0,0))
@@ -104,54 +108,30 @@ while True:
             pygame.quit()
 
     player.update()
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_c]:
+        correct = 0 if correct else 1
 
-    origin = player.pos#Vec(pygame.mouse.get_pos())
-    fovLim = [ (player.ang+radians(FOV/2)) % (2*math.pi) , (player.ang-radians(FOV/2)) % (2*math.pi)]
-    angs = fovLim.copy()
-    for poly in Map:
-        poly.render(win)
-        for p in poly.points:
-            ang = atan2(p.y-origin.y, p.x-origin.x)
-            for x in [-0.00001,0,0.00001]:
-                angs.append(ang+x)
-    
-    print(fovLim)
+    origin = player.pos
     intersects = []
-    for a in angs:
-        collide = checkIntersect(origin, a)
+    step = math.radians(FOV)/quality
+    for i in range(1,quality+1):
+        ang = player.ang-math.radians(FOV/2) + step*i
+        collide = checkIntersect(origin, ang)
+        # This "if" is solely error-proofing
         if collide:
-            # pygame.draw.line(win, (190, 30, 30), mouse, collide)
-            intersects.append((collide, a))
+            intersects.append((collide, ang))
+            correction = math.cos(ang - player.ang)#**correct
+            poleHeight = max(winHeight/(player.pos.distance_to(collide)*correction), 2)
+            poleRect = pygame.Rect(winWidth/quality*i, 0, winWidth/quality, poleHeight)
+            poleRect.centery = winHeight/2
+            pygame.draw.rect(win, (255,255,255), poleRect)
 
     # The intersects are stored with a point collision value and an angle (note that angle sorting will get awfully complicated)
-    # intersects.append(((400, 250), atan2(250-origin.y, 270-origin.x)))
-    intersects.sort(key=lambda x: x[1])
     
-    Poly([i[0] for i in intersects], False, (0, 90, 200, 0.1)).render(win)
-    
-    # The code below finds finds the index values of the outermost ray projections 
-    # I believe what this helps is finding the index values between the fov limits so the player only sees what it should
-    indices = sorted([[intersects.index(i) for i in intersects if i[1] == fovLim[0]][0], [intersects.index(i) for i in intersects if i[1] == fovLim[1]][0]])
-
     # Draw the mini map and shift over points to right half of screen
+    for p in Map:
+        p.render(win)
     [pygame.draw.line(win, (40, 200, 30), player.pos+(winWidth, 0), i[0]+(winWidth, 0)) for i in intersects]
-    
-    poles = []
-    #print(indices[0]-indices[1], len(intersects))
-    for i in range(indices[0],indices[1]+1):
-        poleHeight = max(winHeight/player.pos.distance_to(intersects[i][0]), 2)
-        x = abs((intersects[i][1]-fovLim[0])/radians(FOV))*winWidth
-        # print(x)
-        poleRect = pygame.Rect(x, 0, 1, poleHeight)
-        poleRect.centery = winHeight/2
-        poles.append(poleRect)
-        pygame.draw.line(win, (255,255,255), poleRect.midbottom, poleRect.topleft)
-        pygame.draw.line(win, (240, 100, 30), player.pos+(winWidth, 0), intersects[i][0]+(winWidth, 0))
-
-    for p in range(len(poles)-1):
-        pygame.draw.line(win, (255,255,255), poles[p].midtop, poles[p+1].midtop)
-        pygame.draw.line(win, (255,255,255), poles[p].midbottom, poles[p+1].midbottom)
-
-    pygame.draw.circle(win, (5, 140, 34), pygame.mouse.get_pos(), 2)
-
+    print(correct)
     pygame.display.update()

@@ -2,7 +2,7 @@ import pygame
 winWidth, winHeight = 500, 500
 FPS = 60
 delta = 60/FPS
-FOV = 110
+FOV = 90
 
 
 def dist(vec1, vec2):
