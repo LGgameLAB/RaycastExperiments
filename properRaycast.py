@@ -28,9 +28,9 @@ class Player:
             self.ang -= 0.05*delta
         
         if keys[pygame.K_a]:
-            self.pos += (cos(self.ang+pi/2), sin(self.ang+pi/2))
+            self.pos -= (cos(self.ang+pi/2), sin(self.ang+pi/2))
         if keys[pygame.K_d]:
-            self.pos += (cos(self.ang-pi/2), sin(self.ang-pi/2))
+            self.pos -= (cos(self.ang-pi/2), sin(self.ang-pi/2))
         
         global FOV
         
@@ -99,7 +99,7 @@ for x in range(40,200, 10):
 
 quality = 100
 player = Player()
-correct = 0
+correct = 1
 while True:
     clock.tick(60)
     win.fill((0,0,0))
@@ -121,11 +121,14 @@ while True:
         # This "if" is solely error-proofing
         if collide:
             intersects.append((collide, ang))
-            correction = math.cos(ang - player.ang)#**correct
-            poleHeight = max(winHeight/(player.pos.distance_to(collide)*correction), 2)
+            dist = player.pos.distance_to(collide)
+            correction = math.cos(ang - player.ang)**correct
+            print(ang - player.ang)
+            poleHeight = max(winHeight/(dist*correction), 2)
             poleRect = pygame.Rect(winWidth/quality*i, 0, winWidth/quality, poleHeight)
             poleRect.centery = winHeight/2
-            pygame.draw.rect(win, (255,255,255), poleRect)
+            col = min(255, 255/(dist*0.1))
+            pygame.draw.rect(win, (col, col, col), poleRect)
 
     # The intersects are stored with a point collision value and an angle (note that angle sorting will get awfully complicated)
     
